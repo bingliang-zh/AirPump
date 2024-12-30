@@ -1,11 +1,10 @@
+#include <U8g2lib.h>
 #include <Wire.h>
-#include <Adafruit_GFX.h>
-#include <Adafruit_SSD1306.h>
 
 #define SCREEN_WIDTH 128
 #define SCREEN_HEIGHT 64
-#define OLED_RESET -1
-Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
+
+U8G2_SH1106_128X64_NONAME_F_HW_I2C display(U8G2_R0, /* reset=*/U8X8_PIN_NONE);
 
 const int sensorPin = A0;
 const int potentiometerPin = A1;
@@ -30,10 +29,10 @@ void setup()
   pinMode(relayPin, OUTPUT);
   pinMode(buttonPin, INPUT_PULLUP);
 
-  display.begin(SSD1306_SWITCHCAPVCC, 0x3C);
-  display.display();
+  display.begin();
+  display.clearBuffer();
+  display.sendBuffer();
   delay(2000);
-  display.clearDisplay();
 }
 
 bool releaseLock = false;
@@ -127,50 +126,36 @@ void loop()
     targetPressure = analogRead(potentiometerPin) * (1.6 / 1023.0);
   }
 
-  int TEXT_SIZE = 2;
-  int GAP = 0;
-  int CHAR_WIDTH = 6 * TEXT_SIZE;
-  int LINE_HEIGHT = 8 * TEXT_SIZE;
-
-  display.clearDisplay();
-  display.setTextSize(TEXT_SIZE);
-  display.setTextColor(SSD1306_WHITE);
-  display.setCursor(0, 0);
-  display.print("S ");
+  int LINE_HEIGHT = 14;
+  int GAP = 6;
+  display.clearBuffer();
+  display.setFont(u8g2_font_12x6LED_tr); // Choose a suitable font
+  display.setCursor(0, 1 * LINE_HEIGHT);
+  display.print("Sen: ");
   display.print(sensorValue * 10, 1); // Bar
-  display.print(" Bar");
+  display.print(" Bar/");
 
-  display.setCursor(CHAR_WIDTH * 2, LINE_HEIGHT + GAP);
   display.print(sensorValue * 145.038, 0); // PSI
   display.println(" PSI");
 
-  display.setCursor(0, 2 * (LINE_HEIGHT + GAP) + 2);
-  display.print("T ");
+  display.setCursor(0, 2 * LINE_HEIGHT);
+  display.print("Tar: ");
   display.print(targetPressure * 10, 1); // Bar
-  display.print(" Bar");
-  display.setCursor(CHAR_WIDTH * 2, 3 * (LINE_HEIGHT + GAP) + 2);
+  display.print(" Bar/");
   display.print(targetPressure * 145.038, 0); // PSI
   display.println(" PSI");
 
-  if (persistMode)
-  {
-    display.setCursor(0, 3 * (LINE_HEIGHT + GAP) + 2);
-    display.print("K");
-  }
-  if (isPumping)
-  {
-    display.setCursor(CHAR_WIDTH, 3 * (LINE_HEIGHT + GAP) + 2);
-    display.print("P");
-  }
-  else if (pumpingMode)
-  {
-    display.setCursor(CHAR_WIDTH, 3 * (LINE_HEIGHT + GAP) + 2);
-    display.print("p");
-  }
+  display.setCursor(0, 3 * LINE_HEIGHT + GAP);
+  display.print(persistMode ? "Persist Mode" : "");
 
+  display.setCursor(0, 4 * LINE_HEIGHT + GAP);
+  display.print(isPumping     ? "Pumping"
+                : pumpingMode ? "Waiting"
+                              : "Press to start");
+
+  display.sendBuffer();
   handleButtonPress();
   controlPump();
 
-  display.display();
   delay(100);
 }
